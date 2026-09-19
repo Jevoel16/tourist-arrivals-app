@@ -68,7 +68,7 @@ if st.button("Run cleaning"):
     iqr = q3 - q1
     lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
     flagged = df[(df["arrivals"] < lower) | (df["arrivals"] > upper)]
-    
+
     #outliers
     # Note: Use .values[0] when assigning from another row to prevent NaN due to index misalignment
     df.loc[df["date"] == "2001-02-01", "arrivals"] = df.loc[df["date"] == "2000-02-01", "arrivals"].values[0]
@@ -99,8 +99,7 @@ if "clean_report" in st.session_state:
     # Outlier Rationale Description
     st.markdown("""
 **Outlier Handling Rationale:**
-*(Retained 900k-1m+ arrivals as this is within the expected range for a Dec-Feb period)*
-*(Replaced 2001-02-01 arrivals with the value from 2000-02-01, as this shows a clear outlier)*
+*(Retained 900k-1m+ arrivals as this is within the expected range for a Dec-Feb period; Replaced 2001-02-01 arrivals with the value from 2000-02-01, as this shows a clear outlier)*
 - **Retained:** Why certain flagged dates were kept (e.g., true holiday spikes).
 - **Modified:** Why certain dates were hardcoded/smoothed.
     """)
