@@ -1,8 +1,19 @@
 # Tourist Arrivals Forecasting Lab
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 This repository contains a machine learning pipeline for forecasting Philippine tourist arrivals. It features two different architectures:
-1. **The Graded Baseline**: A Streamlit application.
-2. **The Advanced Extension**: A decoupled architecture using a FastAPI backend and a Next.js (React) frontend.
+1. **The Graded Baseline**: A Streamlit application (`Home.py`).
+2. **The Advanced Extension**: A decoupled architecture using a FastAPI backend and a custom Next.js (React) frontend.
+
+## Advanced Extension Features
+The decoupled Next.js + FastAPI architecture introduces a robust, modern forecasting interface:
+- **Interactive "Snake" Flowchart**: A visual roadmap on the home page indicating exactly where you are in the 8-stage ML pipeline.
+- **Chronological State Locking**: The UI enforces pipeline integrity. You cannot skip ahead to stages you haven't completed, and if you re-run an earlier stage (like Data Cleaning), all downstream models are automatically invalidated and visually locked until re-run.
+- **Cinematic Navigation**: Smooth, framer-motion powered zoom-in transitions between pipeline stages and the global flowchart.
+- **Persistent Dark Mode**: A universal light/dark mode toggle that automatically themes the entire application using Tailwind CSS class variants.
+
+---
 
 ## Prerequisites
 
@@ -74,3 +85,9 @@ The frontend provides a polished, interactive UI with custom Recharts graphs tha
    npm run dev
    ```
 4. Open your browser to `http://localhost:3000` to interact with the pipeline.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
