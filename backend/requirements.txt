@@ -1,4 +1,5 @@
-streamlit
+fastapi
+uvicorn
 pandas
 numpy
 scipy
@@ -6,3 +7,5 @@ statsmodels
 scikit-learn
 tensorflow
 shap
+joblib
+pyarrow
