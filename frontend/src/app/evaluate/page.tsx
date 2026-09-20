@@ -1,9 +1,11 @@
 "use client"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-
+import { LineChart as LineChartIcon } from 'lucide-react';
 export default function EvaluatePage() {
-  const [report, setReport] = useState<any>(null);
+  
+
+const [report, setReport] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -13,6 +15,7 @@ export default function EvaluatePage() {
     try {
       const res = await api.get('/evaluate');
       setReport(res.data);
+      window.dispatchEvent(new Event("status-update"));
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message);
     } finally {
@@ -21,25 +24,34 @@ export default function EvaluatePage() {
   };
 
   return (
-    <div className="max-w-4xl">
-      <div className="mb-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <button 
-          onClick={runEvaluate}
-          disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md disabled:opacity-50 transition-colors"
-        >
-          {loading ? 'Evaluating...' : 'Score on the test set'}
-        </button>
-      </div>
-
+    <div className="flex-1 w-full flex flex-col items-center justify-center min-h-screen pt-24 pb-4 px-24">
       {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6 border border-red-200">
+        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6 w-full max-w-4xl">
           {error}
         </div>
       )}
 
+      {!report && !loading && !error && (
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 max-w-lg w-full">
+          <button
+            onClick={runEvaluate}
+            className="flex items-center gap-3 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold text-lg shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] hover:scale-105 transition-all duration-300"
+          >
+            <LineChartIcon className="w-6 h-6" />
+            Score on the test set
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex flex-col items-center animate-in fade-in duration-300">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500 mb-4"></div>
+          <p className="text-gray-500 dark:text-gray-400 font-medium tracking-wide animate-pulse">Evaluating...</p>
+        </div>
+      )}
+
       {report && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-5xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="overflow-x-auto bg-white border border-gray-200 rounded-lg shadow-sm">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

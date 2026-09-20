@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Database, Sparkles, ListTree, Wrench, Brain, LineChart, Lightbulb, TrendingUp, ChevronRight, ChevronDown, ChevronLeft } from "lucide-react";
+import { Database, Sparkles, ListTree, Wrench, Brain, LineChart, Lightbulb, TrendingUp, ChevronRight, ChevronDown, ChevronLeft, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 
 const STAGES = [
@@ -24,8 +24,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full pb-8">
-      <div className="text-center mb-10">
+    <div className="flex flex-col items-center justify-center min-h-screen pt-8 pb-4 w-full">
+      <div className="text-center mb-6">
         <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl mb-4 leading-tight">
           Tourist Arrivals in the Philippines<br />Forecasting Lab
         </h1>
@@ -34,8 +34,8 @@ export default function Home() {
         </p>
       </div>
       
-      {/* 4x2 Grid Container with gap-12 (3rem) */}
-      <div className="grid grid-cols-4 grid-rows-2 gap-12 max-w-6xl w-full relative px-4">
+      {/* 4x2 Grid Container with gap-6 */}
+      <div className="grid grid-cols-4 grid-rows-2 gap-6 max-w-4xl w-full relative px-24">
         {STAGES.map((stage, i) => {
           const isDone = status[stage.id];
           const isNextDone = stage.nextId ? status[stage.nextId] : false;
@@ -93,6 +93,26 @@ export default function Home() {
           );
         })}
       </div>
+      
+      {/* Reset Pipeline Button */}
+      {Object.values(status).some(Boolean) && (
+        <div className="mt-12 animate-in fade-in duration-500">
+          <button
+            onClick={async () => {
+              if (confirm("Are you sure you want to delete all saved data and reset the pipeline?")) {
+                await api.delete('/reset/dataset');
+                const res = await api.get('/status');
+                setStatus(res.data);
+                window.dispatchEvent(new Event("status-update"));
+              }
+            }}
+            className="px-6 py-2 border border-red-200 dark:border-red-900/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-full text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Saved Data & Reset Pipeline
+          </button>
+        </div>
+      )}
     </div>
   );
 }

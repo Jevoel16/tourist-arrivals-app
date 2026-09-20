@@ -19,9 +19,21 @@ def get_dataset_summary():
     preview_df = raw_df.head().copy()
     preview_df["date"] = preview_df["date"].dt.strftime("%Y-%m-%d")
     
+    missing_info = []
+    for col in raw_df.columns:
+        null_count = raw_df[col].isna().sum()
+        if null_count > 0:
+            null_dates = raw_df[raw_df[col].isna()]["date"].dt.date.astype(str).tolist()
+            missing_info.append({
+                "Column Name": col,
+                "Null Count": int(null_count),
+                "Dates with Nulls": ", ".join(null_dates)
+            })
+    
     return {
         "rows": len(raw_df),
         "columns": len(raw_df.columns),
         "preview": preview_df.to_dict(orient="records"),
-        "missing_months": [str(m.date()) for m in missing_months]
+        "missing_months": [str(m.date()) for m in missing_months],
+        "missing_df": missing_info
     }

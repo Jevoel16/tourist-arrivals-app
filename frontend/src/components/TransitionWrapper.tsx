@@ -49,7 +49,7 @@ export function TransitionWrapper({ children }: { children: React.ReactNode }) {
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="w-full min-h-screen"
       >
-        <div className={isHome ? "w-full h-full" : "max-w-4xl mx-auto py-16 px-6"}>
+        <div className="w-full h-full">
           <FrozenRouter>{children}</FrozenRouter>
         </div>
       </motion.div>

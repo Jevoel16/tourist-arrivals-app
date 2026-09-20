@@ -18,6 +18,25 @@ router = APIRouter()
 def status():
     return get_pipeline_status()
 
+from state_manager import clear_downstream_artifacts, delete_artifact
+
+@router.delete("/reset/{stage}")
+def reset_stage(stage: str):
+    stage_to_key = {
+        "dataset": ("raw_df", "parquet"),
+        "clean": ("clean_df", "parquet"),
+        "features": ("selected_features", "pkl"),
+        "prepare": ("X_train_seq", "pkl"),
+        "train": ("model", "keras"),
+    }
+    mapping = stage_to_key.get(stage)
+    if mapping:
+        key, ext = mapping
+        # Sever the pipeline at this exact artifact
+        clear_downstream_artifacts(key)
+        delete_artifact(key, ext)
+    return {"status": "reset"}
+
 # --- Schemas ---
 class CleanRequest(BaseModel):
     impute_nulls: bool = False

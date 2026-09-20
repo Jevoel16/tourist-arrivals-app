@@ -44,7 +44,15 @@ export function TopRightHeader() {
     const fetchStatus = () => api.get("/status").then((res) => setStatus(res.data)).catch(() => {});
     fetchStatus();
     const interval = setInterval(fetchStatus, 1500);
-    return () => clearInterval(interval);
+    
+    // Also listen for instant updates dispatched by pages
+    const handleStatusUpdate = () => fetchStatus();
+    window.addEventListener("status-update", handleStatusUpdate);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("status-update", handleStatusUpdate);
+    };
   }, []);
 
   const nextRoute = NEXT_ROUTES[pathname];
