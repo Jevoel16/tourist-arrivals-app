@@ -3,8 +3,17 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ScatterChart, Scatter, XAxis as SXAxis, YAxis as SYAxis, CartesianGrid as SCartesianGrid, Tooltip as STooltip, ResponsiveContainer as SResponsiveContainer } from 'recharts';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, HelpCircle } from 'lucide-react';
 import { useTheme } from 'next-themes';
+const InfoTooltip = ({ text }: { text: string }) => (
+  <div className="relative group inline-block ml-2">
+    <HelpCircle className="w-5 h-5 text-gray-400 hover:text-emerald-500 cursor-help transition-colors" />
+    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:block w-80 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 text-sm text-left font-normal text-gray-800 dark:text-gray-200 pointer-events-none">
+      {text}
+    </div>
+  </div>
+);
+
 export default function ExplainPage() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -39,6 +48,45 @@ export default function ExplainPage() {
     y: report.dependence.shap[i]
   })) : [];
 
+  // 1. Global Interpretation
+  const topGlobal = globalData.slice(0, 2).map((d: any) => d.name);
+  const globalText = topGlobal.length > 0 
+    ? `Based on the global SHAP values, the model relied most heavily on ${topGlobal.join(' and ')}. This indicates the LSTM leans on these factors to recognize seasonal and climate patterns when forecasting arrivals. (Note: This reveals what the model leaned on, not proven real-world cause and effect).`
+    : "";
+
+  // 2. Local Interpretation
+  const sortedLocal = [...localData].sort((a: any, b: any) => b.value - a.value);
+  const topPos = sortedLocal.filter((d: any) => d.value > 0);
+  const topNeg = sortedLocal.filter((d: any) => d.value < 0);
+  let localText = "For this specific month's forecast, ";
+  if (topPos.length > 0 && topNeg.length > 0) {
+    localText += `the strongest upward driver was ${topPos[0].name}, pushing the prediction higher relative to the baseline. Conversely, ${topNeg[topNeg.length - 1].name} pulled the forecast downward.`;
+  } else if (topPos.length > 0) {
+    localText += `factors like ${topPos[0].name} drove the forecast up relative to the baseline.`;
+  } else if (topNeg.length > 0) {
+    localText += `factors like ${topNeg[topNeg.length - 1].name} pulled the forecast downward relative to the baseline.`;
+  }
+  localText += " This reveals how the model weighs these specific real-world conditions for this prediction.";
+
+  // 3. Dependence Interpretation
+  let depText = "";
+  if (depData.length > 1) {
+    const vals = depData.map((d: any) => d.x);
+    const shaps = depData.map((d: any) => d.y);
+    let sum_x = 0, sum_y = 0, sum_xy = 0, sum_xx = 0;
+    for (let i = 0; i < vals.length; i++) {
+      sum_x += vals[i]; sum_y += shaps[i];
+      sum_xy += vals[i] * shaps[i];
+      sum_xx += vals[i] * vals[i];
+    }
+    const n = vals.length;
+    const denominator = (n * sum_xx - sum_x * sum_x);
+    const slope = denominator !== 0 ? (n * sum_xy - sum_x * sum_y) / denominator : 0;
+    
+    const relationship = slope > 0 ? "increase predictions as this feature rises" : "decrease predictions as this feature rises";
+    depText = `This plot shows how the SHAP attribution changes alongside ${report?.top_feature}. The data indicates that the model tends to ${relationship}. Remember, this association is just what the model learned to rely on, rather than proven real-world causation.`;
+  }
+
   return (
     <div className="flex-1 w-full flex flex-col items-center justify-center min-h-screen pt-24 pb-4 px-24">
       {error && (
@@ -71,7 +119,10 @@ export default function ExplainPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-64">
-              <h3 className="font-semibold mb-4 text-gray-800 dark:text-gray-200">Global Feature Importance (mean |SHAP|)</h3>
+              <h3 className="font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                Global Feature Importance (mean |SHAP|)
+                <InfoTooltip text={globalText} />
+              </h3>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={globalData} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -89,7 +140,10 @@ export default function ExplainPage() {
             </div>
 
             <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-64">
-              <h3 className="font-semibold mb-4 text-gray-800 dark:text-gray-200">Local Explanations (One Forecast)</h3>
+              <h3 className="font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                Local Explanations (One Forecast)
+                <InfoTooltip text={localText} />
+              </h3>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={localData} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -108,7 +162,10 @@ export default function ExplainPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-64">
-            <h3 className="font-semibold mb-4 text-gray-800 dark:text-gray-200">Dependence Plot — {report.top_feature}</h3>
+            <h3 className="font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              Dependence Plot — {report.top_feature}
+              <InfoTooltip text={depText} />
+            </h3>
             <SResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <SCartesianGrid strokeDasharray="3 3" />
