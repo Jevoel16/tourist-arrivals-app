@@ -38,7 +38,7 @@ export default function CleanPage() {
         <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 max-w-lg w-full">
           <div className="mb-8 w-full bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center">
             <p className="text-gray-600 dark:text-gray-400">
-              Create Duplicates Report, Impute Missing Values, Flag the Outliers.
+              Create Duplicates Report, Impute Missing Values, and Flag the Outliers.
             </p>
           </div>
           <button
