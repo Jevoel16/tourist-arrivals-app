@@ -4,10 +4,23 @@ import { api } from '@/lib/api';
 import { Wrench } from 'lucide-react';
 export default function PreparePage() {
   
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
   useEffect(() => {
-    api.delete('/reset/prepare').then(() => window.dispatchEvent(new Event("status-update"))).catch(() => {});
+    api.get('/status')
+      .then((res) => {
+        if (res.data.prepare) {
+          api.get('/prepare')
+            .then(r => setReport(r.data))
+            .catch(err => setError(err.response?.data?.detail || err.message));
+        } else {
+          api.delete('/reset/prepare').then(() => window.dispatchEvent(new Event("status-update"))).catch(() => {});
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingStatus(false));
   }, []);
-const [trainRatio, setTrainRatio] = useState(0.80);
+  const [trainRatio, setTrainRatio] = useState(0.80);
   const [report, setReport] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +47,7 @@ const [trainRatio, setTrainRatio] = useState(0.80);
         </div>
       )}
 
-      {!report && !loading && !error && (
+      {!report && !loading && !error && !checkingStatus && (
         <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 max-w-lg w-full">
           <div className="mb-8 w-full bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-200">

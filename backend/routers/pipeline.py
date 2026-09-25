@@ -2,10 +2,10 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from services.dataset_service import get_dataset_summary
-from services.clean_service import run_clean
-from services.features_service import select_features
-from services.prepare_service import prepare_data
-from services.train_service import train_model
+from services.clean_service import run_clean, get_clean_report
+from services.features_service import select_features, get_features_report
+from services.prepare_service import prepare_data, get_prepare_report
+from services.train_service import train_model, get_train_report
 from services.evaluate_service import evaluate_model
 from services.explain_service import explain_model
 from services.forecast_service import get_forecast_default, run_forecast
@@ -53,17 +53,33 @@ class ForecastRequest(BaseModel):
 def dataset():
     return get_dataset_summary()
 
+@router.get("/clean")
+def get_clean():
+    return get_clean_report()
+
 @router.post("/clean")
 def clean(req: CleanRequest):
     return run_clean(req.impute_nulls)
+
+@router.get("/features")
+def get_features():
+    return get_features_report()
 
 @router.post("/features")
 def features():
     return select_features()
 
+@router.get("/prepare")
+def get_prepare():
+    return get_prepare_report()
+
 @router.post("/prepare")
 def prepare(req: PrepareRequest):
     return prepare_data(req.train_ratio)
+
+@router.get("/train")
+def get_train():
+    return get_train_report()
 
 @router.post("/train")
 def train():

@@ -93,8 +93,18 @@ def run_clean(impute_nulls: bool):
     dup_display["date"] = dup_display["date"].dt.strftime("%Y-%m-%d")
     flagged["date"] = flagged["date"].dt.strftime("%Y-%m-%d")
 
-    return {
+    report = {
         "dup_display": dup_display.to_dict(orient="records"),
         "missing_df": missing_df.to_dict(orient="records"),
         "flagged": flagged[["date", "arrivals", "status"]].to_dict(orient="records")
     }
+    save_artifact("clean_report", report, "pkl")
+    return report
+
+def get_clean_report():
+    report = load_artifact("clean_report", "pkl")
+    if not report:
+        # If report is missing but dataset exists, auto-regenerate it without asking the user to click the button again!
+        return run_clean(impute_nulls=True)
+    return report
+

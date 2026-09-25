@@ -4,6 +4,10 @@ import shap
 from state_manager import load_artifact
 
 def explain_model():
+    report = load_artifact("explain_report", "pkl")
+    if report:
+        return report
+
     model = load_artifact("model", "keras")
     X_train_seq = load_artifact("X_train_seq", "pkl")
     X_test_seq = load_artifact("X_test_seq", "pkl")
@@ -30,7 +34,7 @@ def explain_model():
     mean_abs = np.abs(shap_values).mean(axis=(0, 1))
     top_idx = int(np.argmax(mean_abs))
 
-    return {
+    result = {
         "global_importance": dict(zip(features, mean_abs.tolist())),
         "one_forecast": dict(zip(features, shap_values[0].sum(axis=0).tolist())),
         "top_feature": features[top_idx],
@@ -39,3 +43,6 @@ def explain_model():
             "shap": [float(shap_values[i][-1, top_idx]) for i in range(len(shap_values))],
         },
     }
+    from state_manager import save_artifact
+    save_artifact("explain_report", result, "pkl")
+    return result

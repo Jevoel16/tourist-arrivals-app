@@ -47,8 +47,16 @@ def select_features():
             
     save_artifact("selected_features", selected_features, "pkl")
 
-    return {
+    report = {
         "results": results,
         "vif_log": vif_log,
         "selected_features": selected_features
     }
+    save_artifact("features_report", report, "pkl")
+    return report
+
+def get_features_report():
+    report = load_artifact("features_report", "pkl")
+    if not report:
+        return select_features()
+    return report

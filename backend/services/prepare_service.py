@@ -41,7 +41,7 @@ def prepare_data(train_ratio: float):
     save_artifact("y_test_seq", y_test_seq, "pkl")
     save_artifact("test_df", test_df, "parquet")
 
-    return {
+    report = {
         "train_ratio": train_ratio,
         "train_rows": len(train_df),
         "test_rows": len(test_df),
@@ -51,3 +51,11 @@ def prepare_data(train_ratio: float):
         "test_windows": len(X_test_seq),
         "lookback": LOOKBACK,
     }
+    save_artifact("prepare_report", report, "pkl")
+    return report
+
+def get_prepare_report():
+    report = load_artifact("prepare_report", "pkl")
+    if not report:
+        return prepare_data(train_ratio=0.8)
+    return report

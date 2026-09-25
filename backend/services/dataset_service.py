@@ -6,12 +6,16 @@ from state_manager import save_artifact
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "tourist_arrivals.csv")
 
 def get_dataset_summary():
-    try:
-        raw_df = pd.read_csv(DATA_PATH, parse_dates=["date"]).sort_values("date").reset_index(drop=True)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    from state_manager import load_artifact
+    raw_df = load_artifact("raw_df", "parquet")
     
-    save_artifact("raw_df", raw_df, "parquet")
+    if raw_df is None:
+        try:
+            raw_df = pd.read_csv(DATA_PATH, parse_dates=["date"]).sort_values("date").reset_index(drop=True)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        
+        save_artifact("raw_df", raw_df, "parquet")
     
     expected = pd.date_range(raw_df["date"].min(), raw_df["date"].max(), freq="MS")
     missing_months = expected.difference(raw_df["date"])

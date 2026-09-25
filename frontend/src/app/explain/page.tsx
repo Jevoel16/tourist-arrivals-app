@@ -20,6 +20,20 @@ export default function ExplainPage() {
   const [report, setReport] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
+  useEffect(() => {
+    api.get('/status')
+      .then((res) => {
+        if (res.data.explain) {
+          api.get('/explain')
+            .then(r => setReport(r.data))
+            .catch(err => setError(err.response?.data?.detail || err.message));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingStatus(false));
+  }, []);
 
   const runExplain = async () => {
     setLoading(true);
@@ -95,7 +109,7 @@ export default function ExplainPage() {
         </div>
       )}
 
-      {!report && !loading && !error && (
+      {!report && !loading && !error && !checkingStatus && (
         <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 max-w-lg w-full">
           <button
             onClick={runExplain}

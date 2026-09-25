@@ -2,6 +2,7 @@ import os
 import pickle
 import joblib
 import pandas as pd
+import json
 from tensorflow.keras.models import load_model
 
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
@@ -12,7 +13,9 @@ os.makedirs(STORE_DIR, exist_ok=True)
 ARTIFACT_CHAIN = [
     ("raw_df", "parquet"),
     ("clean_df", "parquet"),
+    ("clean_report", "pkl"),
     ("selected_features", "pkl"),
+    ("features_report", "pkl"),
     ("scaler_X", "joblib"),
     ("scaler_y", "joblib"),
     ("X_train_seq", "pkl"),
@@ -20,7 +23,11 @@ ARTIFACT_CHAIN = [
     ("X_test_seq", "pkl"),
     ("y_test_seq", "pkl"),
     ("test_df", "parquet"),
+    ("prepare_report", "pkl"),
     ("model", "keras"),
+    ("train_report", "pkl"),
+    ("evaluate_report", "pkl"),
+    ("explain_report", "pkl"),
 ]
 
 def _get_path(key, ext):
@@ -61,6 +68,9 @@ def save_artifact(key, obj, ext="pkl"):
         obj.save(path)
     elif ext == "parquet":
         obj.to_parquet(path)
+    elif ext == "json":
+        with open(path, "w") as f:
+            json.dump(obj, f)
 
 def load_artifact(key, ext="pkl"):
     path = _get_path(key, ext)
@@ -76,6 +86,9 @@ def load_artifact(key, ext="pkl"):
         return load_model(path)
     elif ext == "parquet":
         return pd.read_parquet(path)
+    elif ext == "json":
+        with open(path, "r") as f:
+            return json.load(f)
     return None
 
 def clear_store():

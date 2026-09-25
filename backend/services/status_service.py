@@ -8,7 +8,7 @@ def get_pipeline_status():
         "features": os.path.exists(_get_path("selected_features", "pkl")),
         "prepare": os.path.exists(_get_path("X_train_seq", "pkl")),
         "train": os.path.exists(_get_path("model", "keras")),
-        "evaluate": os.path.exists(_get_path("model", "keras")), # Evaluate doesn't save state
-        "explain": os.path.exists(_get_path("model", "keras")),   # Explain doesn't save state
+        "evaluate": os.path.exists(_get_path("evaluate_report", "pkl")),
+        "explain": os.path.exists(_get_path("explain_report", "pkl")),
         "forecast": os.path.exists(_get_path("model", "keras")),  # Forecast doesn't save state
     }

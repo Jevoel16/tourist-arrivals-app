@@ -10,6 +10,10 @@ def score(actual, pred):
     return {"MAE": mae, "RMSE": rmse, "MAPE": mape, "R2": float(1 - ss_res / ss_tot)}
 
 def evaluate_model():
+    report = load_artifact("evaluate_report", "pkl")
+    if report:
+        return report
+
     model = load_artifact("model", "keras")
     X_test_seq = load_artifact("X_test_seq", "pkl")
     y_test_seq = load_artifact("y_test_seq", "pkl")
@@ -34,8 +38,11 @@ def evaluate_model():
     naive = np.array([test_arrivals[i + lookback - 1] for i in range(n_windows)]).reshape(-1, 1)
     seasonal_naive = np.array([test_arrivals[i + lookback - SEASONAL_PERIOD] for i in range(n_windows)]).reshape(-1, 1)
 
-    return {
+    result = {
         "LSTM": score(actual, pred),
         "Naive": score(actual, naive),
         "Seasonal naive": score(actual, seasonal_naive),
     }
+    from state_manager import save_artifact
+    save_artifact("evaluate_report", result, "pkl")
+    return result

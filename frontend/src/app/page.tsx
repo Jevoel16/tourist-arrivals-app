@@ -18,6 +18,7 @@ const STAGES = [
 
 export default function Home() {
   const [status, setStatus] = useState<Record<string, boolean>>({});
+  const [showResetModal, setShowResetModal] = useState(false);
 
   useEffect(() => {
     api.get("/status").then((res) => setStatus(res.data)).catch(() => {});
@@ -98,14 +99,7 @@ export default function Home() {
       {Object.values(status).some(Boolean) && (
         <div className="mt-12 animate-in fade-in duration-500">
           <button
-            onClick={async () => {
-              if (confirm("Are you sure you want to delete all saved data and reset the pipeline?")) {
-                await api.delete('/reset/dataset');
-                const res = await api.get('/status');
-                setStatus(res.data);
-                window.dispatchEvent(new Event("status-update"));
-              }
-            }}
+            onClick={() => setShowResetModal(true)}
             className="px-6 py-2 border border-red-200 dark:border-red-900/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-full text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm"
           >
             <Trash2 className="w-4 h-4" />
@@ -113,6 +107,39 @@ export default function Home() {
           </button>
         </div>
       )}
+
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Reset Pipeline?</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to delete all saved data and reset the entire pipeline? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowResetModal(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  setShowResetModal(false);
+                  await api.delete('/reset/dataset');
+                  const res = await api.get('/status');
+                  setStatus(res.data);
+                  window.dispatchEvent(new Event("status-update"));
+                }}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium shadow-sm flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Reset Pipeline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

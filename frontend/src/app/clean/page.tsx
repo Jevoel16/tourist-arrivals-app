@@ -8,8 +8,21 @@ export default function CleanPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
   useEffect(() => {
-    api.delete('/reset/clean').then(() => window.dispatchEvent(new Event("status-update"))).catch(() => {});
+    api.get('/status')
+      .then((res) => {
+        if (res.data.clean) {
+          api.get('/clean')
+            .then(r => setReport(r.data))
+            .catch(err => setError(err.response?.data?.detail || err.message));
+        } else {
+          api.delete('/reset/clean').then(() => window.dispatchEvent(new Event("status-update"))).catch(() => {});
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingStatus(false));
   }, []);
 
   const runCleaning = async () => {
@@ -34,7 +47,7 @@ export default function CleanPage() {
         </div>
       )}
 
-      {!report && !loading && !error && (
+      {!report && !loading && !error && !checkingStatus && (
         <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 max-w-lg w-full">
           <div className="mb-8 w-full bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center">
             <p className="text-gray-600 dark:text-gray-400">

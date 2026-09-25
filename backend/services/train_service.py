@@ -37,9 +37,17 @@ def train_model():
 
     save_artifact("model", best_model, "keras")
 
-    return {
+    report = {
         "best_params": best_params,
         "val_loss": float(best_val_loss),
         "loss_history": [float(x) for x in best_history["loss"]],
         "val_loss_history": [float(x) for x in best_history["val_loss"]]
     }
+    save_artifact("train_report", report, "pkl")
+    return report
+
+def get_train_report():
+    report = load_artifact("train_report", "pkl")
+    if not report:
+        return train_model()
+    return report
