@@ -1,6 +1,6 @@
 # Tourist Arrivals Forecasting Lab
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![version](https://img.shields.io/badge/version-0.1.1-blue?style=flat) [![license](https://img.shields.io/badge/license-Sprucetrap%20SAL%201.0-orange?style=flat)](LICENSE)
 
 This repository contains a machine learning pipeline for forecasting Philippine tourist arrivals. It features two different architectures:
 1. **The Graded Baseline**: A Streamlit application (`Home.py`).
@@ -90,4 +90,6 @@ The frontend provides a polished, interactive UI with custom Recharts graphs tha
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Licensed under the Sprucetrap Source-Available License 1.0 (non-commercial use, attribution required). See [LICENSE](LICENSE).
+
+Based on Tourist Arrivals Forecasting Lab by Sprucetrap (https://github.com/Jevoel16).

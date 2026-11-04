@@ -1,0 +1,12 @@
+# Local Claude settings and personal instructions
+.claude/
+CLAUDE.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+.env.local
