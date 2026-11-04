@@ -1,5 +1,5 @@
 import numpy as np
-from fastapi import HTTPException
+from errors import StageNotReady
 from sklearn.preprocessing import MinMaxScaler
 from state_manager import load_artifact, save_artifact
 
@@ -13,8 +13,10 @@ def make_sequences(X, y, lookback):
 def prepare_data(train_ratio: float):
     df = load_artifact("clean_df", "parquet")
     selected_features = load_artifact("selected_features", "pkl")
-    if df is None or selected_features is None:
-        raise HTTPException(status_code=400, detail="Run previous endpoints first")
+    if df is None:
+        raise StageNotReady("clean")
+    if selected_features is None:
+        raise StageNotReady("features")
 
     LOOKBACK = 12
     split_idx = int(len(df) * train_ratio)

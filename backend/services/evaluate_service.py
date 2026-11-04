@@ -1,5 +1,6 @@
 import numpy as np
 from fastapi import HTTPException
+from errors import StageNotReady
 from state_manager import load_artifact
 
 def score(actual, pred):
@@ -20,8 +21,10 @@ def evaluate_model():
     scaler_y = load_artifact("scaler_y", "joblib")
     test_df = load_artifact("test_df", "parquet")
     
-    if model is None or X_test_seq is None or y_test_seq is None or scaler_y is None or test_df is None:
-        raise HTTPException(status_code=400, detail="Run previous endpoints first")
+    if X_test_seq is None or y_test_seq is None or scaler_y is None or test_df is None:
+        raise StageNotReady("prepare")
+    if model is None:
+        raise StageNotReady("train")
 
     pred_scaled = model.predict(X_test_seq)
     pred = scaler_y.inverse_transform(pred_scaled)

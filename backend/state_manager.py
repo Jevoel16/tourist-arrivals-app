@@ -33,6 +33,11 @@ ARTIFACT_CHAIN = [
 def _get_path(key, ext):
     return os.path.join(STORE_DIR, f"{key}.{ext}")
 
+def artifact_mtime(key, ext="pkl"):
+    """Last-modified time (epoch seconds) of an artifact, or None if it doesn't exist."""
+    path = _get_path(key, ext)
+    return os.path.getmtime(path) if os.path.exists(path) else None
+
 def delete_artifact(key, ext="pkl"):
     path = _get_path(key, ext)
     if os.path.exists(path):

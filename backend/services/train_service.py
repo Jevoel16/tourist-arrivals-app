@@ -1,5 +1,5 @@
 import itertools
-from fastapi import HTTPException
+from errors import StageNotReady
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
@@ -9,7 +9,7 @@ def train_model():
     X_train_seq = load_artifact("X_train_seq", "pkl")
     y_train_seq = load_artifact("y_train_seq", "pkl")
     if X_train_seq is None or y_train_seq is None:
-        raise HTTPException(status_code=400, detail="Run previous endpoints first")
+        raise StageNotReady("prepare")
 
     PARAM_GRID = {"units": [32, 64], "dropout": [0.1, 0.3], "batch_size": [16, 32]}
     lookback = X_train_seq.shape[1]

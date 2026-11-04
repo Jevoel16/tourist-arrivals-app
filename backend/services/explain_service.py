@@ -1,5 +1,5 @@
 import numpy as np
-from fastapi import HTTPException
+from errors import StageNotReady
 import shap
 from state_manager import load_artifact
 
@@ -13,8 +13,10 @@ def explain_model():
     X_test_seq = load_artifact("X_test_seq", "pkl")
     features = load_artifact("selected_features", "pkl")
     
-    if model is None or X_train_seq is None or X_test_seq is None or features is None:
-        raise HTTPException(status_code=400, detail="Run previous endpoints first")
+    if X_train_seq is None or X_test_seq is None or features is None:
+        raise StageNotReady("prepare")
+    if model is None:
+        raise StageNotReady("train")
 
     lookback, n_features = X_train_seq.shape[1], X_train_seq.shape[2]
 

@@ -1,11 +1,11 @@
 import pandas as pd
-from fastapi import HTTPException
+from errors import StageNotReady
 from state_manager import load_artifact, save_artifact
 
 def run_clean(impute_nulls: bool):
     raw_df = load_artifact("raw_df", "parquet")
     if raw_df is None:
-        raise HTTPException(status_code=400, detail="Run dataset endpoint first")
+        raise StageNotReady("dataset")
         
     df = raw_df.copy()
 
@@ -37,10 +37,11 @@ def run_clean(impute_nulls: bool):
     has_anomaly = False
     original_anomaly_val = None
     
-    if anomaly_mask.any():
+    source_rows = df.loc[df["date"] == "2000-02-01", "arrivals"]
+    if anomaly_mask.any() and not source_rows.empty:
         has_anomaly = True
         original_anomaly_val = df.loc[anomaly_mask, "arrivals"].values[0]
-        source_val = df.loc[df["date"] == "2000-02-01", "arrivals"].values[0]
+        source_val = source_rows.values[0]
         df.loc[anomaly_mask, "arrivals"] = source_val
         imputed_records.append({
             "Date": anomaly_date,

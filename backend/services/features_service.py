@@ -1,5 +1,5 @@
 import numpy as np
-from fastapi import HTTPException
+from errors import StageNotReady
 from scipy.stats import spearmanr
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from state_manager import load_artifact, save_artifact
@@ -7,7 +7,7 @@ from state_manager import load_artifact, save_artifact
 def select_features():
     df = load_artifact("clean_df", "parquet")
     if df is None:
-        raise HTTPException(status_code=400, detail="Run clean endpoint first")
+        raise StageNotReady("clean")
         
     CANDIDATES = [
         "quarter", "is_holiday_peak", "temp_mean_c", "temp_min_c", "temp_max_c",
