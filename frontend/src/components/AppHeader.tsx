@@ -20,7 +20,7 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
         <Link href="/" className="group flex shrink-0 items-center gap-2 rounded-lg" aria-label="Pipeline overview">
           <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-glow transition-transform group-hover:-rotate-6">
             {current ? <Home className="size-4" aria-hidden /> : <PlaneLanding className="size-4" aria-hidden />}
@@ -29,7 +29,7 @@ export function AppHeader() {
         </Link>
 
         <nav aria-label="Pipeline stages" className="flex min-w-0 flex-1 justify-center">
-          <ol className="flex items-center gap-1 sm:gap-1.5">
+          <ol className="flex items-center gap-0.5 sm:gap-1.5">
             {STAGES.map((stage, i) => {
               const done = Boolean(status[stage.id]);
               const active = current?.id === stage.id;
@@ -39,18 +39,18 @@ export function AppHeader() {
               const dot = (
                 <span
                   className={cn(
-                    "grid size-6 place-items-center rounded-full border text-[11px] font-semibold transition-all sm:size-7",
+                    "grid size-5 place-items-center rounded-full border text-[10px] font-semibold transition-all sm:size-7 sm:text-[11px]",
                     done && "border-primary bg-primary text-primary-foreground",
                     !done && unlocked && "border-border-strong bg-surface text-foreground",
                     !done && !unlocked && "border-border bg-surface-muted text-muted-foreground",
                     active && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                   )}
                 >
-                  {done ? <Check className="size-3.5" strokeWidth={3} aria-hidden /> : !unlocked ? <Lock className="size-3" aria-hidden /> : stage.step}
+                  {done ? <Check className="size-3 sm:size-3.5" strokeWidth={3} aria-hidden /> : !unlocked ? <Lock className="size-3" aria-hidden /> : stage.step}
                 </span>
               );
               return (
-                <li key={stage.id} className="flex items-center gap-1 sm:gap-1.5">
+                <li key={stage.id} className="flex items-center gap-0.5 sm:gap-1.5">
                   {i > 0 && (
                     <span aria-hidden className={cn("hidden h-0.5 w-3 rounded-full sm:block md:w-5", done ? "bg-primary" : "bg-border")} />
                   )}

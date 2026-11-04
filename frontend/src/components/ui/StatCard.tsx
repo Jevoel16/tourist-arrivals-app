@@ -17,7 +17,7 @@ const toneText = { default: "text-foreground", primary: "text-primary", info: "t
 
 export function StatCard({ label, value, hint, icon: Icon, tone = "default", className, children }: StatCardProps) {
   return (
-    <div className={cn("rounded-card border border-border bg-surface p-5 shadow-sm", className)}>
+    <div className={cn("min-w-0 rounded-card border border-border bg-surface p-5 shadow-sm", className)}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
         {Icon && <Icon className="size-4 text-muted-foreground" aria-hidden />}

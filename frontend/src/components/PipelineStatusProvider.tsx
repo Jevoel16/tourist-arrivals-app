@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
-import type { PipelineStatus, StageId } from "@/lib/stages";
+import { STAGES, type PipelineStatus, type StageId } from "@/lib/stages";
 import type { StageDetail } from "@/lib/types";
 
 const POLL_MS = 1500;
@@ -56,7 +56,12 @@ export function PipelineStatusProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  const status: PipelineStatus = Object.fromEntries(Object.entries(details).map(([id, d]) => [id, Boolean(d?.done)]));
+  // A stage only counts as done when the whole chain before it is done. The
+  // backend marks Forecast ready as soon as a model exists, before Evaluate/Explain.
+  const status: PipelineStatus = {};
+  for (const stage of STAGES) {
+    status[stage.id] = Boolean(details[stage.id]?.done) && (stage.prev === null || Boolean(status[stage.prev]));
+  }
 
   return (
     <PipelineStatusContext.Provider value={{ status, details, online, loading, refresh }}>{children}</PipelineStatusContext.Provider>

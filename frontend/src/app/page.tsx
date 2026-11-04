@@ -43,7 +43,7 @@ function Connector({ index, lit }: { index: number; lit: boolean }) {
       aria-hidden
       className={cn(
         "absolute z-0 hidden items-center justify-center transition-colors duration-500 lg:flex",
-        direction === "down" ? "left-1/2 top-1/2 h-[calc(100%+2rem)] w-[3px] -translate-x-1/2" : "top-1/2 h-[3px] w-[calc(100%+2rem)] -translate-y-1/2",
+        direction === "down" ? "left-1/2 top-1/2 h-[calc(100%+2.5rem)] w-[3px] -translate-x-1/2" : "top-1/2 h-[3px] w-[calc(100%+2.5rem)] -translate-y-1/2",
         direction === "right" && "left-1/2",
         direction === "left" && "right-1/2",
         lit ? "bg-primary" : "bg-border",
@@ -109,7 +109,7 @@ function StageTile({ stage, state, updatedAt }: { stage: Stage; state: TileState
     state === "done" && "border-primary/40",
     state === "next" && "border-primary shadow-glow",
     state === "ready" && "border-border",
-    (state === "locked" || state === "checking") && "border-dashed border-border bg-surface-muted/60",
+    (state === "locked" || state === "checking") && "border-dashed border-border bg-surface-muted",
   );
 
   if (!interactive) {
@@ -206,7 +206,7 @@ export default function Home() {
         </Alert>
       )}
 
-      <ol aria-label="Pipeline stages" className="relative mt-12 grid grid-cols-1 gap-3 lg:grid-cols-4 lg:grid-rows-2 lg:gap-8">
+      <ol aria-label="Pipeline stages" className="relative mt-12 grid grid-cols-1 gap-3 lg:grid-cols-4 lg:grid-rows-2 lg:gap-10">
         {STAGES.map((stage, i) => (
           <li key={stage.id} className={cn("relative", SNAKE_POSITION[stage.id])}>
             <Connector index={i} lit={Boolean(status[stage.id])} />
