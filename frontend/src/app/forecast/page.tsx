@@ -1,131 +1,206 @@
-"use client"
-import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
-import { TrendingUp } from 'lucide-react';
+"use client";
+
+import { useState } from "react";
+import { RotateCcw, Sparkles, TableProperties, TrendingDown, TrendingUp } from "lucide-react";
+import { StagePage } from "@/components/StagePage";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { useStage } from "@/hooks/useStage";
+import { api, errorMessage } from "@/lib/api";
+import { formatInt } from "@/lib/format";
+import type { ForecastDefault } from "@/lib/types";
+import { cn } from "@/lib/cn";
+
+const cellKey = (row: number, col: number) => `${row}-${col}`;
+const tidy = (v: number) => String(Number(v.toFixed(4)));
+const isValid = (v: string) => v.trim() !== "" && Number.isFinite(Number(v));
+
+const fetchDefaults = () => api.get<ForecastDefault>("/forecast-default").then((r) => r.data);
+
 export default function ForecastPage() {
-  
+  // Forecast keeps no server state; "done" just means a trained model exists.
+  const { phase, report, error, status, run, retry } = useStage<ForecastDefault>("forecast", {
+    fetchReport: fetchDefaults,
+    runStage: fetchDefaults,
+    resetIfIncomplete: false,
+  });
 
-const [data, setData] = useState<any>(null);
-  const [editedData, setEditedData] = useState<number[][]>([]);
-  const [prediction, setPrediction] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Only edited cells are stored; everything else falls back to the defaults.
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [predicting, setPredicting] = useState(false);
+  const [prediction, setPrediction] = useState<{ value: number; edited: boolean } | null>(null);
+  const [predictError, setPredictError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.get('/forecast-default')
-      .then(res => {
-        setData(res.data);
-      window.dispatchEvent(new Event("status-update"));
-        setEditedData(res.data.default_data);
-      })
-      .catch(err => setError(err.response?.data?.detail || err.message));
-  }, []);
+  // Stay locked until Explain is done, even though a model exists.
+  const effectivePhase = phase === "done" && status.explain === false ? "locked" : phase;
 
-  const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
-    const newData = [...editedData];
-    newData[rowIndex] = [...newData[rowIndex]];
-    newData[rowIndex][colIndex] = Number(value);
-    setEditedData(newData);
+  const valueAt = (r: number, c: number) => edits[cellKey(r, c)] ?? tidy(report!.default_data[r][c]);
+  const editedCount = Object.keys(edits).length;
+  const invalidCount = report
+    ? report.default_data.reduce((n, row, r) => n + row.filter((_, c) => !isValid(valueAt(r, c))).length, 0)
+    : 0;
+
+  const setCell = (r: number, c: number, value: string) => {
+    if (!report) return;
+    setEdits((prev) => {
+      const next = { ...prev };
+      if (value === tidy(report.default_data[r][c])) delete next[cellKey(r, c)];
+      else next[cellKey(r, c)] = value;
+      return next;
+    });
   };
 
-  const runForecast = async () => {
-    setLoading(true);
-    setError(null);
+  const predict = async () => {
+    if (!report || invalidCount > 0) return;
+    setPredicting(true);
+    setPredictError(null);
     try {
-      const res = await api.post('/forecast', { edited_data: editedData });
-      setPrediction(res.data.prediction);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message);
+      const data = report.default_data.map((row, r) => row.map((_, c) => Number(valueAt(r, c))));
+      const res = await api.post<{ prediction: number }>("/forecast", { edited_data: data });
+      setPrediction({ value: res.data.prediction, edited: editedCount > 0 });
+    } catch (err) {
+      setPredictError(errorMessage(err));
     } finally {
-      setLoading(false);
+      setPredicting(false);
     }
   };
 
+  const rowLabel = (r: number) => report?.window_months?.[r] ?? `t−${report!.lookback - r}`;
+  const actual = report?.reference_actual ?? null;
+  const delta = prediction && actual ? ((prediction.value - actual) / actual) * 100 : null;
+
   return (
-    <div className="flex-1 w-full flex flex-col items-center justify-center min-h-screen pt-24 pb-4 px-24">
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6 w-full max-w-4xl">
-          {error}
-        </div>
-      )}
-
-      {data ? (
-        <div className="w-full max-w-[95rem] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center">
-          <div className="w-fit flex flex-col md:flex-row items-center gap-12 bg-white dark:bg-gray-900 px-8 py-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="text-left">
-              <p className="text-gray-600 dark:text-gray-400">
-                Edit the last <strong>{data.lookback}</strong> months of readings below.
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-6">
-              {loading ? (
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
-                  <span className="text-gray-500 font-medium">Forecasting...</span>
+    <StagePage
+      stageId="forecast"
+      phase={effectivePhase}
+      error={error}
+      onRun={() => run()}
+      onRetry={retry}
+      runLabel="Load last window"
+      loadingLabel="Loading the last training window…"
+      width="wide"
+    >
+      {report && (
+        <>
+          <div className="grid items-start gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader
+                title="What-if inputs"
+                description={`The last ${report.lookback} months of feature readings. Edit any cell to see how the forecast responds.`}
+                icon={TableProperties}
+                action={
+                  <Button variant="ghost" size="sm" icon={RotateCcw} onClick={() => setEdits({})} disabled={editedCount === 0}>
+                    Reset
+                  </Button>
+                }
+              />
+              <CardBody>
+                <div className="custom-scrollbar max-h-[30rem] overflow-auto rounded-xl border border-border">
+                  <table className="min-w-full text-sm">
+                    <caption className="sr-only">Editable feature values for the lookback window</caption>
+                    <thead className="sticky top-0 z-20 bg-surface-muted/95 backdrop-blur">
+                      <tr>
+                        <th scope="col" className="sticky left-0 z-30 bg-surface-muted px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Month
+                        </th>
+                        {report.columns.map((col) => (
+                          <th key={col} scope="col" className="whitespace-nowrap px-2 py-2 text-left font-mono text-xs font-semibold text-muted-foreground">
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {report.default_data.map((row, r) => (
+                        <tr key={r}>
+                          <th scope="row" className="sticky left-0 z-10 whitespace-nowrap bg-surface px-3 py-1.5 text-left font-mono text-xs font-medium text-muted-foreground">
+                            {rowLabel(r)}
+                          </th>
+                          {row.map((_, c) => {
+                            const value = valueAt(r, c);
+                            const edited = cellKey(r, c) in edits;
+                            const invalid = !isValid(value);
+                            return (
+                              <td key={c} className="px-1 py-1">
+                                <input
+                                  type="number"
+                                  step="any"
+                                  inputMode="decimal"
+                                  value={value}
+                                  onChange={(e) => setCell(r, c, e.target.value)}
+                                  aria-label={`${report.columns[c]}, ${rowLabel(r)}`}
+                                  aria-invalid={invalid || undefined}
+                                  className={cn(
+                                    "w-24 rounded-md border bg-transparent px-2 py-1.5 text-sm tabular-nums text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30",
+                                    edited ? "border-info/60 bg-info/5" : "border-border",
+                                    invalid && "border-danger bg-danger/5",
+                                  )}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <button
-                  onClick={runForecast}
-                  className="flex items-center gap-2 px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold shadow-[0_0_10px_rgba(16,185,129,0.4)] hover:shadow-[0_0_15px_rgba(16,185,129,0.6)] hover:scale-105 transition-all duration-300"
-                >
-                  <TrendingUp className="w-5 h-5" />
-                  Forecast Next Month
-                </button>
-              )}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {editedCount > 0 ? `${editedCount} cell${editedCount === 1 ? "" : "s"} edited (highlighted). ` : "Showing the original values. "}
+                  {invalidCount > 0 && <span className="font-medium text-danger">{invalidCount} empty or invalid — fill them in to forecast.</span>}
+                </p>
+              </CardBody>
+            </Card>
 
-              {prediction !== null && !loading && (
-                <div className="bg-green-50 px-4 py-2 rounded-md border border-green-200 flex flex-col items-center animate-in zoom-in duration-300">
-                  <span className="text-green-800 text-xs font-semibold uppercase tracking-wider mb-1">Predicted Arrivals (t+1)</span>
-                  <span className="text-2xl font-bold text-green-600 leading-none">
-                    {prediction.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </span>
+            <div className="space-y-4 lg:sticky lg:top-24">
+              <Card className="p-6">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Forecast{report.reference_month ? ` for ${report.reference_month}` : " for next month"}
+                </p>
+                <div className="mt-3 min-h-[4.5rem]" aria-live="polite">
+                  {prediction ? (
+                    <div className="animate-in fade-in zoom-in-95 duration-300">
+                      <p className="text-4xl font-bold tabular-nums tracking-tight text-foreground">{formatInt(prediction.value)}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">predicted tourist arrivals{prediction.edited ? " (with your edits)" : ""}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Run a forecast to see the predicted arrivals.</p>
+                  )}
                 </div>
-              )}
+
+                {actual !== null && (
+                  <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">Recorded actual</dt>
+                      <dd className="font-medium tabular-nums text-foreground">{formatInt(actual)}</dd>
+                    </div>
+                    {delta !== null && (
+                      <div className="flex justify-between gap-2">
+                        <dt className="text-muted-foreground">Difference</dt>
+                        <dd className={cn("inline-flex items-center gap-1 font-medium tabular-nums", "text-foreground")}>
+                          {delta >= 0 ? <TrendingUp className="size-4" aria-hidden /> : <TrendingDown className="size-4" aria-hidden />}
+                          {delta >= 0 ? "+" : ""}
+                          {delta.toFixed(1)}%
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
+
+                <Button className="mt-6 w-full" size="lg" icon={Sparkles} loading={predicting} disabled={invalidCount > 0} onClick={predict}>
+                  {predicting ? "Forecasting…" : "Forecast next month"}
+                </Button>
+              </Card>
+
+              {predictError && <Alert tone="error">{predictError}</Alert>}
+              <Alert tone="info">
+                The default window is the last one in the training set, so its recorded actual is known. Edited inputs are scaled with the same
+                training scaler before prediction.
+              </Alert>
             </div>
           </div>
-
-          <div className="w-full overflow-x-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm custom-scrollbar">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider bg-gray-100 dark:bg-gray-800 sticky left-0 z-10">T</th>
-                  {data.columns.map((col: string) => (
-                    <th key={col} className="px-2 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {editedData.map((row, i) => (
-                  <tr key={i}>
-                    <td className="px-2 py-1 whitespace-nowrap text-[10px] text-gray-500 bg-gray-50 dark:bg-gray-800 sticky left-0 font-mono">
-                      -{data.lookback - i}
-                    </td>
-                    {row.map((val, j) => (
-                      <td key={j} className="px-1 py-1">
-                        <input
-                          type="number"
-                          step="any"
-                          value={val}
-                          onChange={(e) => handleCellChange(i, j, e.target.value)}
-                          className="w-20 px-1 py-1 text-xs border border-gray-300 dark:border-gray-700 rounded focus:ring-blue-500 focus:border-blue-500 bg-transparent text-gray-900 dark:text-white"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-
-        </div>
-      ) : !error && (
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
+        </>
       )}
-    </div>
+    </StagePage>
   );
 }

@@ -60,6 +60,10 @@ export interface ForecastDefault {
   default_data: number[][];
   columns: string[];
   lookback: number;
+  /** "YYYY-MM" label for each row of the default window. */
+  window_months?: string[];
+  /** Month the default window predicts. */
+  reference_month?: string | null;
   /** Actual arrivals for the month the default window predicts, if known. */
   reference_actual?: number | null;
 }
