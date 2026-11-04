@@ -1,145 +1,250 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
-import { Database, Sparkles, ListTree, Wrench, Brain, LineChart, Lightbulb, TrendingUp, ChevronRight, ChevronDown, ChevronLeft, Trash2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Lock, RotateCcw, Trash2 } from "lucide-react";
+import { usePipelineStatus } from "@/components/PipelineStatusProvider";
+import { Alert } from "@/components/ui/Alert";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { API_URL, api, errorMessage, notifyStatusChange } from "@/lib/api";
+import { STAGE_BY_ID, STAGES, isUnlocked, type PipelineStatus, type Stage } from "@/lib/stages";
+import { timeAgo } from "@/lib/format";
+import { cn } from "@/lib/cn";
 
-const STAGES = [
-  { id: "dataset", name: "Dataset", path: "/dataset", icon: Database, col: "col-start-1 row-start-1", nextId: "clean", prevId: null },
-  { id: "clean", name: "Clean", path: "/clean", icon: Sparkles, col: "col-start-2 row-start-1", nextId: "features", prevId: "dataset" },
-  { id: "features", name: "Features", path: "/features", icon: ListTree, col: "col-start-3 row-start-1", nextId: "prepare", prevId: "clean" },
-  { id: "prepare", name: "Prepare", path: "/prepare", icon: Wrench, col: "col-start-4 row-start-1", nextId: "train", prevId: "features" },
-  { id: "train", name: "Train", path: "/train", icon: Brain, col: "col-start-4 row-start-2", nextId: "evaluate", prevId: "prepare" },
-  { id: "evaluate", name: "Evaluate", path: "/evaluate", icon: LineChart, col: "col-start-3 row-start-2", nextId: "explain", prevId: "train" },
-  { id: "explain", name: "Explain", path: "/explain", icon: Lightbulb, col: "col-start-2 row-start-2", nextId: "forecast", prevId: "train" },
-  { id: "forecast", name: "Forecast", path: "/forecast", icon: TrendingUp, col: "col-start-1 row-start-2", nextId: null, prevId: "train" },
-];
+// Desktop "snake": row 1 runs left-to-right, row 2 runs back right-to-left.
+const SNAKE_POSITION: Record<string, string> = {
+  dataset: "lg:col-start-1 lg:row-start-1",
+  clean: "lg:col-start-2 lg:row-start-1",
+  features: "lg:col-start-3 lg:row-start-1",
+  prepare: "lg:col-start-4 lg:row-start-1",
+  train: "lg:col-start-4 lg:row-start-2",
+  evaluate: "lg:col-start-3 lg:row-start-2",
+  explain: "lg:col-start-2 lg:row-start-2",
+  forecast: "lg:col-start-1 lg:row-start-2",
+};
 
-export default function Home() {
-  const [status, setStatus] = useState<Record<string, boolean>>({});
-  const [showResetModal, setShowResetModal] = useState(false);
+type TileState = "done" | "next" | "ready" | "locked" | "checking";
 
-  useEffect(() => {
-    api.get("/status").then((res) => setStatus(res.data)).catch(() => {});
-  }, []);
+function tileState(stage: Stage, status: PipelineStatus, nextId: string | undefined, loading: boolean): TileState {
+  if (loading) return "checking";
+  if (status[stage.id]) return "done";
+  if (!isUnlocked(stage, status)) return "locked";
+  return stage.id === nextId ? "next" : "ready";
+}
 
+/** Line from this tile's center toward the next tile, drawn behind the tiles on desktop. */
+function Connector({ index, lit }: { index: number; lit: boolean }) {
+  if (index >= STAGES.length - 1) return null;
+  const direction = index < 3 ? "right" : index === 3 ? "down" : "left";
+  const Chevron = direction === "right" ? ChevronRight : direction === "down" ? ChevronDown : ChevronLeft;
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen pt-8 pb-4 w-full">
-      <div className="text-center mb-6">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl mb-4 leading-tight">
-          Tourist Arrivals in the Philippines<br />Forecasting Lab
-        </h1>
-        <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-          Follow the connected path below to train and deploy your ML pipeline.
-        </p>
-      </div>
-      
-      {/* 4x2 Grid Container with gap-6 */}
-      <div className="grid grid-cols-4 grid-rows-2 gap-6 max-w-4xl w-full relative px-24">
-        {STAGES.map((stage, i) => {
-          const isDone = status[stage.id];
-          const isNextDone = stage.nextId ? status[stage.nextId] : false;
-          const isUnlocked = stage.prevId === null || status[stage.prevId];
-          
-          return (
-            <div key={stage.id} className={`relative ${stage.col}`}>
-              {/* Connecting Lines */}
-              {stage.id === "dataset" || stage.id === "clean" || stage.id === "features" ? (
-                <div className={`absolute top-1/2 left-1/2 w-[calc(100%+3rem)] h-[3px] -translate-y-1/2 z-0 flex items-center justify-center transition-colors duration-500 ${isNextDone ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-gray-200 dark:bg-gray-800'}`}>
-                  <div className="bg-background px-1 transition-colors duration-300">
-                    <ChevronRight className={`w-6 h-6 transition-colors duration-300 ${isNextDone ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-700'}`} strokeWidth={3} />
-                  </div>
-                </div>
-              ) : null}
-              
-              {stage.id === "prepare" ? (
-                <div className={`absolute top-1/2 left-1/2 h-[calc(100%+3rem)] w-[3px] -translate-x-1/2 z-0 flex items-center justify-center transition-colors duration-500 ${isNextDone ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-gray-200 dark:bg-gray-800'}`}>
-                  <div className="bg-background py-1 transition-colors duration-300">
-                    <ChevronDown className={`w-6 h-6 transition-colors duration-300 ${isNextDone ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-700'}`} strokeWidth={3} />
-                  </div>
-                </div>
-              ) : null}
-              
-              {stage.id === "train" || stage.id === "evaluate" || stage.id === "explain" ? (
-                <div className={`absolute top-1/2 right-1/2 w-[calc(100%+3rem)] h-[3px] -translate-y-1/2 z-0 flex items-center justify-center transition-colors duration-500 ${isNextDone ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-gray-200 dark:bg-gray-800'}`}>
-                  <div className="bg-background px-1 transition-colors duration-300">
-                    <ChevronLeft className={`w-6 h-6 transition-colors duration-300 ${isNextDone ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-700'}`} strokeWidth={3} />
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Node Card */}
-              {isUnlocked ? (
-                <Link 
-                  href={stage.path}
-                  className={`relative z-10 flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-900 border-2 rounded-xl hover:scale-105 transition-all duration-300 w-full aspect-square group cursor-pointer ${isDone ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500'}`}
-                >
-                  <div className={`absolute top-4 left-4 w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold transition-colors duration-300 ${isDone ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 group-hover:text-black dark:group-hover:text-white'}`}>
-                    {i + 1}
-                  </div>
-                  <stage.icon className={`w-12 h-12 mb-4 transition-colors duration-300 ${isDone ? 'text-emerald-500' : 'text-gray-400 dark:text-gray-600 group-hover:text-black dark:group-hover:text-white'}`} />
-                  <h3 className={`font-semibold text-lg transition-colors duration-300 ${isDone ? 'text-black dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>{stage.name}</h3>
-                </Link>
-              ) : (
-                <div className="relative z-10 flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-950 border-2 border-gray-200 dark:border-gray-800 rounded-xl w-full aspect-square cursor-not-allowed transition-colors duration-300">
-                  <div className="absolute top-4 left-4 w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 transition-colors duration-300">
-                    {i + 1}
-                  </div>
-                  <stage.icon className="w-12 h-12 mb-4 text-gray-300 dark:text-gray-700 transition-colors duration-300" />
-                  <h3 className="font-semibold text-lg text-gray-400 dark:text-gray-600 transition-colors duration-300">{stage.name}</h3>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      
-      {/* Reset Pipeline Button */}
-      {Object.values(status).some(Boolean) && (
-        <div className="mt-12 animate-in fade-in duration-500">
-          <button
-            onClick={() => setShowResetModal(true)}
-            className="px-6 py-2 border border-red-200 dark:border-red-900/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-full text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Saved Data & Reset Pipeline
-          </button>
-        </div>
+    <div
+      aria-hidden
+      className={cn(
+        "absolute z-0 hidden items-center justify-center transition-colors duration-500 lg:flex",
+        direction === "down" ? "left-1/2 top-1/2 h-[calc(100%+2rem)] w-[3px] -translate-x-1/2" : "top-1/2 h-[3px] w-[calc(100%+2rem)] -translate-y-1/2",
+        direction === "right" && "left-1/2",
+        direction === "left" && "right-1/2",
+        lit ? "bg-primary" : "bg-border",
       )}
-
-      {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Reset Pipeline?</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to delete all saved data and reset the entire pipeline? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setShowResetModal(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={async () => {
-                  setShowResetModal(false);
-                  await api.delete('/reset/dataset');
-                  const res = await api.get('/status');
-                  setStatus(res.data);
-                  window.dispatchEvent(new Event("status-update"));
-                }}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium shadow-sm flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Reset Pipeline
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    >
+      <span className={cn("rounded-full bg-background p-0.5", lit ? "text-primary" : "text-border-strong")}>
+        <Chevron className="size-5" strokeWidth={3} />
+      </span>
     </div>
   );
 }
 
+function StageTile({ stage, state, updatedAt }: { stage: Stage; state: TileState; updatedAt?: string | null }) {
+  const Icon = stage.icon;
+  const prev = stage.prev ? STAGE_BY_ID[stage.prev] : null;
+  const interactive = state !== "locked" && state !== "checking";
+
+  const caption = {
+    done: `Done${updatedAt ? ` · ${timeAgo(updatedAt)}` : ""}`,
+    next: "Up next",
+    ready: "Ready",
+    locked: prev ? `Complete ${prev.name} first` : "Locked",
+    checking: "Checking…",
+  }[state];
+
+  const body = (
+    <>
+      <span
+        className={cn(
+          "grid size-12 shrink-0 place-items-center rounded-2xl border transition-colors lg:size-14",
+          state === "done" && "border-primary/30 bg-primary/10 text-primary",
+          state === "next" && "border-primary bg-primary text-primary-foreground shadow-glow",
+          state === "ready" && "border-border bg-surface-muted text-foreground",
+          (state === "locked" || state === "checking") && "border-border bg-surface-muted text-muted-foreground",
+        )}
+      >
+        {state === "locked" ? <Lock className="size-5" aria-hidden /> : <Icon className="size-6" aria-hidden />}
+      </span>
+      <span className="min-w-0 flex-1 lg:flex-none">
+        <span className="flex items-center gap-2 lg:justify-center">
+          <span className="text-xs font-semibold tabular-nums text-muted-foreground">{String(stage.step).padStart(2, "0")}</span>
+          <span className={cn("font-semibold", state === "locked" ? "text-muted-foreground" : "text-foreground")}>{stage.name}</span>
+        </span>
+        <span
+          className={cn(
+            "mt-1 flex items-center gap-1 text-xs lg:justify-center",
+            state === "done" && "text-primary",
+            state === "next" && "font-medium text-primary",
+            state !== "done" && state !== "next" && "text-muted-foreground",
+          )}
+        >
+          {state === "done" && <Check className="size-3.5" aria-hidden />}
+          {caption}
+        </span>
+      </span>
+      {interactive && <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 lg:hidden" aria-hidden />}
+    </>
+  );
+
+  const shell = cn(
+    "relative z-10 flex w-full items-center gap-4 rounded-card border bg-surface p-4 text-left transition-all duration-300",
+    "lg:aspect-square lg:flex-col lg:justify-center lg:gap-3 lg:p-5 lg:text-center",
+    state === "done" && "border-primary/40",
+    state === "next" && "border-primary shadow-glow",
+    state === "ready" && "border-border",
+    (state === "locked" || state === "checking") && "border-dashed border-border bg-surface-muted/60",
+  );
+
+  if (!interactive) {
+    return (
+      <div className={cn(shell, "cursor-not-allowed")} aria-disabled="true">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={stage.path} className={cn(shell, "group hover:-translate-y-1 hover:border-primary hover:shadow-lg")}>
+      {body}
+    </Link>
+  );
+}
+
+export default function Home() {
+  const { status, details, online, loading, refresh } = usePipelineStatus();
+  const [showReset, setShowReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const doneCount = STAGES.filter((s) => status[s.id]).length;
+  const nextStage = STAGES.find((s) => !status[s.id] && isUnlocked(s, status));
+  const closeReset = useCallback(() => setShowReset(false), []);
+
+  const resetPipeline = async () => {
+    setResetting(true);
+    setResetError(null);
+    try {
+      await api.delete("/reset/dataset");
+      notifyStatusChange();
+      setShowReset(false);
+    } catch (err) {
+      setResetError(errorMessage(err));
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 pb-16 pt-10 sm:px-6 lg:pt-14">
+      <section className="animate-in fade-in slide-in-from-bottom-4 text-center duration-500">
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary">LSTM forecasting pipeline</p>
+        <h1 className="mx-auto mt-3 max-w-3xl text-balance text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
+          Tourist Arrivals in the Philippines <span className="text-primary">Forecasting Lab</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
+          Follow the connected path from raw data to a trained, explained model. Each stage unlocks the next, and re-running an earlier stage
+          clears everything downstream.
+        </p>
+
+        <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-4">
+          <div className="w-full">
+            <div className="mb-2 flex justify-between text-sm">
+              <span className="text-muted-foreground">Pipeline progress</span>
+              <span className="font-semibold tabular-nums text-foreground">
+                {doneCount} / {STAGES.length}
+              </span>
+            </div>
+            <div
+              className="h-2 overflow-hidden rounded-full bg-surface-muted"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={STAGES.length}
+              aria-valuenow={doneCount}
+              aria-label="Stages complete"
+            >
+              <div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${(doneCount / STAGES.length) * 100}%` }} />
+            </div>
+          </div>
+          {!loading && online && (
+            <ButtonLink href={nextStage?.path ?? "/forecast"} size="lg" icon={nextStage?.icon}>
+              {doneCount === 0 ? "Start with Dataset" : nextStage ? `Continue: ${nextStage.name}` : "Open the forecaster"}
+            </ButtonLink>
+          )}
+        </div>
+      </section>
+
+      {!online && (
+        <Alert
+          tone="error"
+          title="Can't reach the API"
+          className="mx-auto mt-8 max-w-2xl"
+          action={
+            <Button variant="secondary" size="sm" icon={RotateCcw} onClick={() => refresh()}>
+              Retry
+            </Button>
+          }
+        >
+          The backend at <code className="font-mono text-xs">{API_URL}</code> isn&apos;t responding. Start it with{" "}
+          <code className="font-mono text-xs">cd backend &amp;&amp; uvicorn main:app --reload --port 8000</code>.
+        </Alert>
+      )}
+
+      <ol aria-label="Pipeline stages" className="relative mt-12 grid grid-cols-1 gap-3 lg:grid-cols-4 lg:grid-rows-2 lg:gap-8">
+        {STAGES.map((stage, i) => (
+          <li key={stage.id} className={cn("relative", SNAKE_POSITION[stage.id])}>
+            <Connector index={i} lit={Boolean(status[stage.id])} />
+            {/* Mobile timeline line between stacked tiles */}
+            {i < STAGES.length - 1 && (
+              <span aria-hidden className={cn("absolute left-10 top-full z-0 h-3 w-0.5 lg:hidden", status[stage.id] ? "bg-primary" : "bg-border")} />
+            )}
+            <StageTile stage={stage} state={tileState(stage, status, nextStage?.id, loading)} updatedAt={details[stage.id]?.updated_at} />
+          </li>
+        ))}
+      </ol>
+
+      {doneCount > 0 && (
+        <div className="animate-in fade-in mt-12 flex justify-center duration-500">
+          <Button variant="danger-outline" size="sm" icon={Trash2} onClick={() => setShowReset(true)}>
+            Delete saved data &amp; reset pipeline
+          </Button>
+        </div>
+      )}
+
+      <Modal
+        open={showReset}
+        onClose={closeReset}
+        title="Reset the pipeline?"
+        description="This deletes every saved artifact on the server (dataset, cleaned data, scalers, model and reports). You'll start again from the Dataset stage."
+      >
+        {resetError && (
+          <p role="alert" className="text-sm text-danger sm:mr-auto sm:self-center">
+            {resetError}
+          </p>
+        )}
+        <Button variant="ghost" onClick={closeReset}>
+          Cancel
+        </Button>
+        <Button variant="danger" icon={Trash2} loading={resetting} onClick={resetPipeline}>
+          Reset pipeline
+        </Button>
+      </Modal>
+    </div>
+  );
+}
