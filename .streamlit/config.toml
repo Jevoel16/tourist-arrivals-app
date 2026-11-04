@@ -1,0 +1,20 @@
+# Matches the Next.js design tokens (frontend/src/app/globals.css)
+[theme]
+primaryColor = "#059669"
+baseRadius = "medium"
+font = "sans-serif"
+
+[theme.light]
+primaryColor = "#059669"
+backgroundColor = "#f6f8fa"
+secondaryBackgroundColor = "#eef2f6"
+textColor = "#0f172a"
+
+[theme.dark]
+primaryColor = "#10b981"
+backgroundColor = "#0a0f1a"
+secondaryBackgroundColor = "#111827"
+textColor = "#e2e8f0"
+
+[client]
+toolbarMode = "minimal"

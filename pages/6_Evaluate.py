@@ -1,13 +1,13 @@
 # pages/6_Evaluate.py
-import streamlit as st
+import altair as alt
 import numpy as np
 import pandas as pd
+import streamlit as st
 
-st.title("6. Evaluate honestly")
+from ui import PRIMARY, invalidate_downstream, page_setup, refresh_progress, require
 
-if "model" not in st.session_state:
-    st.warning("Run the Train page first.")
-    st.stop()
+page_setup(6)
+require("model", 5)
 
 SEASONAL_PERIOD = 12  # months in a year — Module 2 §7's ŷₜ = yₜ₋₁₂
 
@@ -20,7 +20,8 @@ def score(actual, pred):
     return {"MAE": mae, "RMSE": rmse, "MAPE": mape, "R2": float(1 - ss_res / ss_tot)}
 
 
-if st.button("Score on the test set"):
+if st.button("Score on the test set", type="primary", icon=":material/monitoring:"):
+    invalidate_downstream(6)
     pred_scaled = st.session_state.model.predict(st.session_state.X_test_seq)
     pred = st.session_state.scaler_y.inverse_transform(pred_scaled)
     actual = st.session_state.scaler_y.inverse_transform(st.session_state.y_test_seq)
@@ -53,9 +54,48 @@ if st.button("Score on the test set"):
         "Seasonal naive": score(actual, seasonal_naive),
     })
 
+refresh_progress()
+
 # Displayed outside the button block, so the result is still here if you
 # leave this page and come back.
 if "evaluate_report" in st.session_state:
-    st.dataframe(st.session_state.evaluate_report)
+    table = st.session_state.evaluate_report.T.rename_axis("Model").reset_index()
+
+    lstm_mae = table.loc[table["Model"] == "LSTM", "MAE"].iloc[0]
+    baselines = table[table["Model"] != "LSTM"]
+    best_base = baselines.loc[baselines["MAE"].idxmin()]
+    change = (lstm_mae - best_base["MAE"]) / best_base["MAE"] * 100
+    (st.success if change <= 0 else st.warning)(
+        f"The LSTM's MAE is {abs(change):.1f}% {'lower' if change <= 0 else 'higher'} than the best baseline "
+        f"({best_base['Model']}).",
+        icon=":material/insights:",
+    )
+
+    st.subheader("Test-set metrics")
+    st.caption("Lower is better for MAE, RMSE and MAPE; higher is better for R². The best value in each column is highlighted.")
+    best_style = f"font-weight: 700; color: {PRIMARY}"
+    styled = (
+        table.style
+        .highlight_min(subset=["MAE", "RMSE", "MAPE"], props=best_style)
+        .highlight_max(subset=["R2"], props=best_style)
+        .format({"MAE": "{:,.0f}", "RMSE": "{:,.0f}", "MAPE": "{:.2f}", "R2": "{:.4f}"})
+    )
+    st.dataframe(styled, hide_index=True, width="stretch")
+
+    st.subheader("Error comparison")
+    errors = table.melt(id_vars="Model", value_vars=["MAE", "RMSE"], var_name="Metric", value_name="Error")
+    chart = (
+        alt.Chart(errors)
+        .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+        .encode(
+            x=alt.X("Model:N", title=None, axis=alt.Axis(labelAngle=0)),
+            xOffset="Metric:N",
+            y=alt.Y("Error:Q", title="Tourist arrivals (lower is better)", axis=alt.Axis(format="~s")),
+            color=alt.Color("Metric:N", scale=alt.Scale(range=["#2563eb", "#7c3aed"]), legend=alt.Legend(title=None, orient="top")),
+            tooltip=["Model", "Metric", alt.Tooltip("Error:Q", format=",.0f")],
+        )
+        .properties(height=320)
+    )
+    st.altair_chart(chart, width="stretch")
 else:
-    st.info('Click "Score on the test set" to evaluate the trained model.')
+    st.info('Click "Score on the test set" to evaluate the trained model.', icon=":material/info:")
