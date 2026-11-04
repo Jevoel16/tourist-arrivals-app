@@ -2,25 +2,163 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ------------------------------------------------------------------ */
+/* Design tokens: every component reads these instead of raw palette  */
+/* colors, so light/dark stay consistent across the whole app.        */
+/* ------------------------------------------------------------------ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f8fa;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --muted-foreground: #64748b;
+
+  --primary: #059669;
+  --primary-hover: #047857;
+  --primary-foreground: #ffffff;
+
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #b45309;
+  --info: #2563eb;
+
+  --chart-1: #2563eb;
+  --chart-2: #e11d48;
+  --chart-3: #7c3aed;
+  --chart-4: #059669;
+  --chart-grid: #e2e8f0;
+  --chart-axis: #64748b;
+
+  --radius: 0.875rem;
+  --shadow-glow: 0 0 0 1px rgb(5 150 105 / 0.15), 0 8px 24px -8px rgb(5 150 105 / 0.35);
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0a0f1a;
+  --foreground: #e2e8f0;
+  --surface: #111827;
+  --surface-muted: #1a2333;
+  --border: #243044;
+  --border-strong: #334155;
+  --muted-foreground: #94a3b8;
+
+  --primary: #10b981;
+  --primary-hover: #34d399;
+  --primary-foreground: #022c22;
+
+  --success: #34d399;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+
+  --chart-1: #60a5fa;
+  --chart-2: #fb7185;
+  --chart-3: #a78bfa;
+  --chart-4: #34d399;
+  --chart-grid: #243044;
+  --chart-axis: #94a3b8;
+
+  --shadow-glow: 0 0 0 1px rgb(16 185 129 / 0.25), 0 8px 28px -8px rgb(16 185 129 / 0.45);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --radius-card: var(--radius);
+  --shadow-glow: var(--shadow-glow);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    /* Faint dot grid gives the "lab bench" feel without competing with content */
+    background-image: radial-gradient(var(--border) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Entrance animations (compatible with tailwindcss-animate names).   */
+/* Duration comes from Tailwind's duration-* utility via --tw-duration */
+/* ------------------------------------------------------------------ */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(0, var(--tw-enter-translate-y, 0), 0) scale(var(--tw-enter-scale, 1));
+  }
+}
+
+@utility animate-in {
+  animation: enter var(--tw-duration, 300ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@utility fade-in {
+  --tw-enter-opacity: 0;
+}
+@utility zoom-in {
+  --tw-enter-scale: 0.9;
+}
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+@utility slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+@utility slide-in-from-bottom-4 {
+  --tw-enter-translate-y: 1rem;
+}
+
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

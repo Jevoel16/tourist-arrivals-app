@@ -1,6 +1,6 @@
 # Tourist Arrivals Forecasting Lab
 
-![version](https://img.shields.io/badge/version-0.1.1-blue?style=flat) [![license](https://img.shields.io/badge/license-Sprucetrap%20SAL%201.0-orange?style=flat)](LICENSE)
+![version](https://img.shields.io/badge/version-0.2.0-blue?style=flat) [![license](https://img.shields.io/badge/license-Sprucetrap%20SAL%201.0-orange?style=flat)](LICENSE)
 
 This repository contains a machine learning pipeline for forecasting Philippine tourist arrivals. It features two different architectures:
 1. **The Graded Baseline**: A Streamlit application (`Home.py`).
