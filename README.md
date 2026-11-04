@@ -6,9 +6,10 @@
 
 **An eight-stage LSTM pipeline that forecasts monthly tourist arrivals in the Philippines, from raw CSV to explained forecast.**
 
-![version](https://img.shields.io/badge/version-0.7.1-blue?style=flat)
+![version](https://img.shields.io/badge/version-0.7.2-blue?style=flat)
 [![license](https://img.shields.io/badge/license-Sprucetrap%20SAL%201.0-orange?style=flat)](LICENSE)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat)
+[![CI](https://github.com/Jevoel16/tourist-arrivals-app/actions/workflows/ci.yml/badge.svg)](https://github.com/Jevoel16/tourist-arrivals-app/actions/workflows/ci.yml)
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.5-black?style=flat)
 ![React](https://img.shields.io/badge/React-19.2.8-61dafb?style=flat)
@@ -242,6 +243,7 @@ Interactive docs: `http://localhost:8000/docs`.
 
 ```text
 tourist-arrivals-app/
+├── .github/workflows/ci.yml  # CI: lint, type-check, build, py_compile
 ├── Home.py                  # Streamlit home: progress, stage cards, reset
 ├── ui.py                    # Streamlit shared helpers (stages, header, sidebar, gates, charts)
 ├── pages/                   # Streamlit stages 1–8 (pipeline logic inline)
@@ -291,7 +293,7 @@ tourist-arrivals-app/
 
 ## Testing
 
-There are no automated tests yet. Before each commit, run these checks:
+There are no automated tests yet. **CI** (`.github/workflows/ci.yml`, GitHub Actions) runs on every push and pull request to `main`: frontend lint, type-check and build on Node 22 (`frontend/.nvmrc`), and a Python compile check of the Streamlit and FastAPI code. Run the same checks locally before each commit:
 
 ```bash
 cd frontend && npm run lint && npm run build
