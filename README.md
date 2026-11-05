@@ -6,10 +6,10 @@
 
 **An eight-stage LSTM pipeline that forecasts monthly tourist arrivals in the Philippines, from raw CSV to explained forecast.**
 
-![version](https://img.shields.io/badge/version-0.7.2-blue?style=flat)
+![version](https://img.shields.io/badge/version-0.7.3-blue?style=flat)
 [![license](https://img.shields.io/badge/license-Sprucetrap%20SAL%201.0-orange?style=flat)](LICENSE)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat)
-[![CI](https://github.com/Jevoel16/tourist-arrivals-app/actions/workflows/ci.yml/badge.svg)](https://github.com/Jevoel16/tourist-arrivals-app/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/Jevoel16/tourist-arrivals-app/ci.yml?branch=main&label=CI&style=flat)](https://github.com/Jevoel16/tourist-arrivals-app/actions/workflows/ci.yml)
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.3.5-black?style=flat)
 ![React](https://img.shields.io/badge/React-19.2.8-61dafb?style=flat)
@@ -33,10 +33,9 @@
 - [Installation](#installation)
 - [Configuration and environment variables](#configuration-and-environment-variables)
 - [Usage](#usage)
+- [Documentation](#documentation)
 - [Project structure](#project-structure)
 - [Scripts](#scripts)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 - [Author](#author)
@@ -236,6 +235,42 @@ Interactive docs: `http://localhost:8000/docs`.
 
 ---
 
+## Documentation
+
+Screenshots from the running app after a full pipeline run (dark theme, 1280px wide). Interactive API docs are served at `http://localhost:8000/docs`.
+
+<details open>
+<summary><strong>Screenshot gallery</strong></summary>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-overview.png" alt="Next.js overview with all eight stages done in the snake flowchart" /><br /><strong>Overview.</strong> The overview: pipeline progress, a *Continue* button and the eight stages as a flowchart.</td>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-dataset.png" alt="Next.js Dataset stage with row, column and gap counts, preview, missing values and data dictionary" /><br /><strong>1 · Dataset.</strong> Dataset: row and column counts, gap check, a preview, missing values and the data dictionary.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-clean.png" alt="Next.js Clean stage showing the cleaning report" /><br /><strong>2 · Clean.</strong> Clean: duplicates removed, missing values imputed and outliers flagged.</td>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-features.png" alt="Next.js Features stage showing Spearman results and the VIF log" /><br /><strong>3 · Features.</strong> Features: Spearman correlation filter and the VIF elimination log.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-prepare.png" alt="Next.js Prepare stage showing the chronological train/test split" /><br /><strong>4 · Prepare.</strong> Prepare: the chronological split and window counts.</td>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-train.png" alt="Next.js Train stage with best hyperparameters and the training history chart" /><br /><strong>5 · Train.</strong> Train: the best grid-search configuration and its loss curves.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-evaluate.png" alt="Next.js Evaluate stage comparing the LSTM with naive and seasonal-naive baselines" /><br /><strong>6 · Evaluate.</strong> Evaluate: test-set metrics against the naive and seasonal-naive baselines.</td>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-explain.png" alt="Next.js Explain stage with SHAP feature importance charts" /><br /><strong>7 · Explain.</strong> Explain: global and local SHAP feature importance.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/nextjs-forecast.png" alt="Next.js Forecast stage with the editable what-if grid" /><br /><strong>8 · Forecast.</strong> Forecast: edit the last 12 months and predict next month's arrivals.</td>
+    <td width="50%" valign="top"><img src="docs/images/streamlit-home.png" alt="Streamlit home page with the stage cards and sidebar progress list" /><br /><strong>Streamlit baseline.</strong> The Streamlit baseline's home page, with stage cards and the sidebar progress list.</td>
+  </tr>
+</table>
+
+</details>
+
+<p align="right"><a href="#top">back to top ↑</a></p>
+
+---
+
 ## Project structure
 
 <details>
@@ -249,6 +284,7 @@ tourist-arrivals-app/
 ├── pages/                   # Streamlit stages 1–8 (pipeline logic inline)
 ├── .streamlit/config.toml   # Streamlit theme
 ├── data/tourist_arrivals.csv
+├── docs/images/             # README screenshots
 ├── requirements.txt         # Streamlit dependencies
 ├── backend/
 │   ├── main.py              # App, CORS, error handlers, logging
@@ -291,62 +327,24 @@ tourist-arrivals-app/
 
 ---
 
-## Testing
-
-There are no automated tests yet. **CI** (`.github/workflows/ci.yml`, GitHub Actions) runs on every push and pull request to `main`: frontend lint, type-check and build on Node 22 (`frontend/.nvmrc`), and a Python compile check of the Streamlit and FastAPI code. Run the same checks locally before each commit:
-
-```bash
-cd frontend && npm run lint && npm run build
-```
-
-```bash
-python -m py_compile Home.py ui.py pages/*.py backend/*.py backend/routers/*.py backend/services/*.py
-```
-
-Then run these manual checks:
-
-- **API:**
-  - `POST /api/prepare` with `{"train_ratio": 2}` returns 422.
-  - `DELETE /api/reset/bogus` returns 404.
-  - `POST /api/clean` before the Dataset stage returns 400 with `"stage": "dataset"`.
-- **Frontend:**
-  - Walk all eight stages.
-  - Locked tiles name their prerequisite.
-  - Stopping the backend shows "API offline" and a *Try again* button.
-  - Pressing <kbd>Esc</kbd> inside a forecast cell doesn't leave the page.
-  - Charts are readable in both themes and at 375px wide.
-- **Streamlit:**
-  - Opening a later page first shows a gate with a link.
-  - Re-running Clean clears Features onward in the sidebar.
-  - Running Features without imputation shows guidance instead of a traceback.
-
-<p align="right"><a href="#top">back to top ↑</a></p>
-
----
-
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| Frontend shows **"Can't reach the API"** | Start the backend from inside `backend/` on port 8000, or set `NEXT_PUBLIC_API_URL`. |
-| Browser console shows CORS errors | Add your frontend origin to `ALLOWED_ORIGINS` and restart uvicorn. |
-| `ModuleNotFoundError: routers` | Run uvicorn from the `backend/` folder, not the repository root. |
-| Streamlit Features says *no feature passed the Spearman filter* | Re-run Clean with *Impute missing values* ticked. |
-| Streamlit pages show "Complete … first" after a reload | Streamlit state is per session. Start again from Dataset. |
-| Train or Explain seems stuck | Grid search and KernelSHAP take a while on CPU. Watch the elapsed timer or the API logs. |
-
-<p align="right"><a href="#top">back to top ↑</a></p>
-
----
-
 ## Contributing
 
 1. Create a branch with a type prefix, for example `feat/short-description` or `fix/short-description`.
 2. Use [Conventional Commits](https://www.conventionalcommits.org/). End the subject with the bumped SemVer version, for example `feat: add CSV export (v1.4.0)`.
-   - A `feat` bumps the minor version, and anything else bumps the patch version.
+   - A breaking change bumps the minor version while the project is `0.x`, a `feat` bumps the minor version, and anything else bumps the patch version.
    - Keep `frontend/package.json` and the README version badge in sync.
-3. Run the checks in [Testing](#testing) before opening a pull request.
-4. Update this README with every change, including the version badges when dependencies change.
+3. Run the same checks as CI before each commit. There are no automated tests yet.
+
+   ```bash
+   cd frontend && npm run lint && npx tsc --noEmit && npm run build
+   ```
+
+   ```bash
+   python -m py_compile Home.py ui.py pages/*.py backend/*.py backend/routers/*.py backend/services/*.py
+   ```
+
+   CI (`.github/workflows/ci.yml`) runs these on every push and pull request to `main`, on Node 22 (`frontend/.nvmrc`) and Python 3.13.
+4. Update this README with every change, including the version badges when dependencies change. Retake a screenshot in `docs/images/` when its screen changes.
 
 <p align="right"><a href="#top">back to top ↑</a></p>
 
